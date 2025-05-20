@@ -55,7 +55,7 @@ export function ReportList() {
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [])
+  }, [fetchReports])
 
   return (
     <div className="space-y-4">
