@@ -34,6 +34,27 @@ export function ReportList() {
 
   useEffect(() => {
     fetchReports()
+
+    // 실시간 구독 설정
+    const channel = supabase
+      .channel('reports_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'report',
+        },
+        () => {
+          // 데이터 변경 시 전체 목록 다시 로드
+          fetchReports()
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
   }, [])
 
   return (
