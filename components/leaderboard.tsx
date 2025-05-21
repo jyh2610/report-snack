@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import { createBrowserClient } from "@supabase/ssr"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { eventBus } from "@/lib/event-bus"
 
 interface User {
   id: string
@@ -19,23 +20,22 @@ export function Leaderboard() {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   )
 
-  useEffect(() => {
-    // 초기 데이터 로드
-    const fetchUsers = async () => {
-      const { data, error } = await supabase
-        .from("user")
-        .select("*")
-        .order("score", { ascending: false })
-        .limit(10)
+  const fetchUsers = async () => {
+    const { data, error } = await supabase
+      .from("user")
+      .select("*")
+      .order("score", { ascending: false })
+      .limit(10)
 
-      if (error) {
-        console.error("Error fetching users:", error)
-        return
-      }
-
-      setUsers(data || [])
+    if (error) {
+      console.error("Error fetching users:", error)
+      return
     }
 
+    setUsers(data || [])
+  }
+
+  useEffect(() => {
     fetchUsers()
 
     // 실시간 구독 설정
@@ -49,14 +49,17 @@ export function Leaderboard() {
           table: "user",
         },
         () => {
-          // 데이터 변경 시 전체 목록 다시 로드
           fetchUsers()
         }
       )
       .subscribe()
 
+    // 신고 이벤트 구독
+    eventBus.subscribe("reportSubmitted", fetchUsers)
+
     return () => {
       supabase.removeChannel(channel)
+      eventBus.unsubscribe("reportSubmitted", fetchUsers)
     }
   }, [supabase])
 

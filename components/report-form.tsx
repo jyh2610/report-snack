@@ -17,6 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { eventBus } from "@/lib/event-bus"
 
 interface User {
   id: string
@@ -34,6 +35,9 @@ export function ReportForm() {
     date: "",
     description: "",
   })
+  const [reportedUserId, setReportedUserId] = useState("")
+  const [success, setSuccess] = useState(false)
+  const [error, setError] = useState("")
 
   useEffect(() => {
     fetchUsers()
@@ -102,6 +106,9 @@ export function ReportForm() {
         description: `${formData.name}님의 간식 섭취가 성공적으로 신고되었습니다.`,
       })
 
+      // 신고 성공 시 이벤트 발생
+      eventBus.emit("reportSubmitted")
+      
       // Reset form
       setFormData({
         name: "",
