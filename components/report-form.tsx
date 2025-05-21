@@ -18,10 +18,20 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { eventBus } from "@/lib/event-bus"
+import Modal from 'react-modal';
+import FindKcal from "./findKcal"
 
 interface User {
   id: string
   username: string
+}
+
+interface FoodData {
+  foodNm: string
+  kcal: number
+  protein: number
+  fat: number
+  carbohydrate: number
 }
 
 export function ReportForm() {
@@ -38,6 +48,7 @@ export function ReportForm() {
   const [reportedUserId, setReportedUserId] = useState("")
   const [success, setSuccess] = useState(false)
   const [error, setError] = useState("")
+  const [foodData, setFoodData] = useState<FoodData | null>(null)
 
   useEffect(() => {
     fetchUsers()
@@ -75,6 +86,11 @@ export function ReportForm() {
     setFormData((prev) => ({ ...prev, name: value }))
   }
 
+  const handleFoodSelect = (selectedFood: FoodData) => {
+    setFoodData(selectedFood)
+    setSuccess(false)
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsSubmitting(true)
@@ -89,7 +105,11 @@ export function ReportForm() {
           location: formData.location,
           date: formData.date,
           description: formData.description,
-          id: users.find((user) => user.username === formData.name)?.id
+          id: users.find((user) => user.username === formData.name)?.id,
+          kcal: foodData?.kcal || 0,
+          protein: foodData?.protein || 0,
+          fat: foodData?.fat || 0,
+          carbohydrate: foodData?.carbohydrate || 0
         }])
         .select()
 
@@ -117,6 +137,7 @@ export function ReportForm() {
         date: "",
         description: "",
       })
+      setFoodData(null)
     } catch (error) {
       console.error('Error submitting report:', error)
       toast({
@@ -130,81 +151,118 @@ export function ReportForm() {
   }
 
   return (
-    <Card>
-      <CardContent className="pt-6">
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="name">누구를 신고하시나요?</Label>
-            <Select onValueChange={handleUserSelect} value={formData.name}>
-              <SelectTrigger>
-                <SelectValue placeholder="사용자를 선택하세요" />
-              </SelectTrigger>
-              <SelectContent>
-                {users.map((user) => (
-                  <SelectItem key={user.id} value={user.username}>
-                    {user.username}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="snack_kind">어떤 간식을 먹었나요?</Label>
-            <Input
-              id="snack_kind"
-              name="snack_kind"
-              placeholder="예: 초콜릿, 과자, 아이스크림 등"
-              value={formData.snack_kind}
-              onChange={handleChange}
-              required
-            />
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <>
+      <Card>
+        <CardContent className="pt-6">
+          <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="location">어디서 먹었나요?</Label>
-              <Input
-                id="location"
-                name="location"
-                placeholder="장소"
-                value={formData.location}
-                onChange={handleChange}
-                required
-              />
+              <Label htmlFor="name">누구를 신고하시나요?</Label>
+              <Select onValueChange={handleUserSelect} value={formData.name}>
+                <SelectTrigger>
+                  <SelectValue placeholder="사용자를 선택하세요" />
+                </SelectTrigger>
+                <SelectContent>
+                  {users.map((user) => (
+                    <SelectItem key={user.id} value={user.username}>
+                      {user.username}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="date">언제 먹었나요?</Label>
-              <Input
-                id="date"
-                name="date"
-                type="datetime-local"
-                value={formData.date}
+              <Label htmlFor="snack_kind">어떤 간식을 먹었나요?</Label>
+              <div className="flex gap-2">
+                <Input
+                  id="snack_kind"
+                  name="snack_kind"
+                  placeholder="예: 초콜릿, 과자, 아이스크림 등"
+                  value={formData.snack_kind}
+                  onChange={handleChange}
+                  required 
+                />
+                <Button 
+                  type="button" 
+                  onClick={() => setSuccess(true)}
+                  className="bg-blue-600 hover:bg-blue-700"
+                >
+                  칼로리 찾기
+                </Button>
+              </div>
+            </div>
+
+            {foodData && (
+              <div className="p-4 bg-secondary/50 rounded-lg">
+                <h3 className="font-semibold mb-2">영양 정보</h3>
+                <div className="grid grid-cols-2 gap-2 text-sm">
+                  <div>음식명: {foodData.foodNm}</div>
+                  <div>칼로리: {foodData.kcal}kcal</div>
+                  <div>단백질: {foodData.protein}g</div>
+                  <div>지방: {foodData.fat}g</div>
+                  <div>탄수화물: {foodData.carbohydrate}g</div>
+                </div>
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="location">어디서 먹었나요?</Label>
+                <Input
+                  id="location"
+                  name="location"
+                  placeholder="장소"
+                  value={formData.location}
+                  onChange={handleChange}
+                  required 
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="date">언제 먹었나요?</Label>
+                <Input
+                  id="date"
+                  name="date"
+                  type="datetime-local"
+                  value={formData.date}
+                  onChange={handleChange}
+                  required 
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="description">상세 내용</Label>
+              <Textarea
+                id="description"
+                name="description"
+                placeholder="상황을 자세히 설명해주세요..."
+                value={formData.description}
                 onChange={handleChange}
-                required
+                rows={3} 
               />
             </div>
-          </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="description">상세 내용</Label>
-            <Textarea
-              id="description"
-              name="description"
-              placeholder="상황을 자세히 설명해주세요..."
-              value={formData.description}
-              onChange={handleChange}
-              rows={3}
-            />
-          </div>
-
-          <Button type="submit" className="w-full bg-green-600 hover:bg-green-700" disabled={isSubmitting}>
-            <CakeIcon className="mr-2 h-4 w-4" />
-            신고하기
-          </Button>
-        </form>
-      </CardContent>
-    </Card>
+            <Button type="submit" className="w-full bg-green-600 hover:bg-green-700" disabled={isSubmitting}>
+              <CakeIcon className="mr-2 h-4 w-4" />
+              신고하기
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
+      <Modal
+        isOpen={success}
+        onRequestClose={() => setSuccess(false)}
+        className="fixed inset-0 flex items-center justify-center p-4 bg-black/50"
+        overlayClassName="fixed inset-0 bg-black/50"
+      >
+        <div className="bg-white rounded-lg p-6 max-w-2xl w-full max-h-[80vh] overflow-y-auto">
+          <FindKcal 
+            foodNm={formData.snack_kind} 
+            onSelect={handleFoodSelect}
+          />
+        </div>
+      </Modal>
+    </>
   )
 }
