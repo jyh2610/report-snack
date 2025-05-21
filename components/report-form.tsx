@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 "use client"
 
 import type React from "react"
@@ -51,8 +52,6 @@ export function ReportForm() {
   const [foodData, setFoodData] = useState<FoodData | null>(null)
 
   useEffect(() => {
-    fetchUsers()
-  }, [])
 
   const fetchUsers = async () => {
     try {
@@ -76,6 +75,9 @@ export function ReportForm() {
       })
     }
   }
+
+    fetchUsers()
+  }, [])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target

@@ -6,8 +6,3 @@ export interface Report {
     date: string;
     description: string;
 }
-
-interface User {
-    id: string;
-    username: string;
-}
