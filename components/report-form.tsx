@@ -4,7 +4,7 @@
 import type React from "react"
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
@@ -21,6 +21,7 @@ import {
 import { eventBus } from "@/lib/event-bus"
 import Modal from 'react-modal';
 import FindKcal from "./findKcal"
+import { useRouter } from "next/navigation"
 
 interface User {
   id: string
@@ -37,6 +38,7 @@ interface FoodData {
 
 export function ReportForm() {
   const { toast } = useToast()
+  const router = useRouter()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [users, setUsers] = useState<User[]>([])
   const [formData, setFormData] = useState({
@@ -45,6 +47,7 @@ export function ReportForm() {
     location: "",
     date: "",
     description: "",
+    informant: "",
   })
   const [reportedUserId, setReportedUserId] = useState("")
   const [success, setSuccess] = useState(false)
@@ -52,29 +55,28 @@ export function ReportForm() {
   const [foodData, setFoodData] = useState<FoodData | null>(null)
 
   useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        const { data: users, error } = await supabase
+          .from('user')
+          .select('*')
 
-  const fetchUsers = async () => {
-    try {
-      const { data: users, error } = await supabase
-        .from('user')
-        .select('*')
- 
-      if (error) {
-        console.error('Error fetching users:', error)
-        throw error
+        if (error) {
+          console.error('Error fetching users:', error)
+          throw error
+        }
+        
+        console.log('Fetched users:', users)
+        setUsers(users || [])
+      } catch (error) {
+        console.error('Error in fetchUsers:', error)
+        toast({
+          title: "사용자 목록을 불러오는데 실패했습니다",
+          description: "잠시 후 다시 시도해주세요.",
+          variant: "destructive",
+        })
       }
-      
-      console.log('Fetched users:', users)
-      setUsers(users || [])
-    } catch (error) {
-      console.error('Error in fetchUsers:', error)
-      toast({
-        title: "사용자 목록을 불러오는데 실패했습니다",
-        description: "잠시 후 다시 시도해주세요.",
-        variant: "destructive",
-      })
     }
-  }
 
     fetchUsers()
   }, [])
@@ -111,7 +113,8 @@ export function ReportForm() {
           kcal: foodData?.kcal || 0,
           protein: foodData?.protein || 0,
           fat: foodData?.fat || 0,
-          carbohydrate: foodData?.carbohydrate || 0
+          carbohydrate: foodData?.carbohydrate || 0,
+          informant: formData.informant,
         }])
         .select()
 
@@ -138,8 +141,12 @@ export function ReportForm() {
         location: "",
         date: "",
         description: "",
+        informant: "",
       })
       setFoodData(null)
+
+      // 페이지 새로고침
+      router.refresh()
     } catch (error) {
       console.error('Error submitting report:', error)
       toast({
@@ -155,7 +162,10 @@ export function ReportForm() {
   return (
     <>
       <Card>
-        <CardContent className="pt-6">
+        <CardHeader>
+          <CardTitle>간식 신고하기</CardTitle>
+        </CardHeader>
+        <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="name">누구를 신고하시나요?</Label>
@@ -174,6 +184,18 @@ export function ReportForm() {
             </div>
 
             <div className="space-y-2">
+              <Label htmlFor="informant">제보자</Label>
+              <Input
+                id="informant"
+                name="informant"
+                value={formData.informant}
+                onChange={handleChange}
+                required
+                placeholder="제보자 이름을 입력하세요"
+              />
+            </div>
+
+            <div className="space-y-2">
               <Label htmlFor="snack_kind">어떤 간식을 먹었나요?</Label>
               <div className="flex gap-2">
                 <Input
@@ -182,7 +204,7 @@ export function ReportForm() {
                   placeholder="예: 초콜릿, 과자, 아이스크림 등"
                   value={formData.snack_kind}
                   onChange={handleChange}
-                  required 
+                  required
                 />
                 <Button 
                   type="button" 
@@ -216,7 +238,7 @@ export function ReportForm() {
                   placeholder="장소"
                   value={formData.location}
                   onChange={handleChange}
-                  required 
+                  required
                 />
               </div>
 
@@ -241,13 +263,13 @@ export function ReportForm() {
                 placeholder="상황을 자세히 설명해주세요..."
                 value={formData.description}
                 onChange={handleChange}
-                rows={3} 
+                className="min-h-[100px]"
               />
             </div>
 
             <Button type="submit" className="w-full bg-green-600 hover:bg-green-700" disabled={isSubmitting}>
               <CakeIcon className="mr-2 h-4 w-4" />
-              신고하기
+              {isSubmitting ? "제출 중..." : "신고하기"}
             </Button>
           </form>
         </CardContent>
