@@ -4,7 +4,7 @@ import { useEffect, useState } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
-import { CakeIcon, ClockIcon, MapPinIcon, MessageSquareIcon, UserIcon } from "lucide-react"
+import { CakeIcon, ClockIcon, MapPinIcon, MessageSquareIcon, UserIcon, ThumbsUpIcon } from "lucide-react"
 import { supabase } from "@/lib/supabase"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
@@ -15,6 +15,8 @@ import {
   DialogTitle,
   DialogTrigger
 } from "@/components/ui/dialog"
+import { useToast } from "@/hooks/use-toast"
+import { useRouter } from "next/navigation"
 
 export interface Report {
   name: string;
@@ -25,13 +27,39 @@ export interface Report {
   id: string;
   objection?: string;
   informant: string;
+  agreements?: { [key: string]: boolean };
 }
 
 export function ReportList() {
+  const router = useRouter()
+  const { toast } = useToast()
   const [reports, setReports] = useState<Report[]>([]);
   const [selectedReport, setSelectedReport] = useState<Report | null>(null);
   const [objection, setObjection] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [users, setUsers] = useState<{ id: string; username: string }[]>([]);
+  const [currentUser, setCurrentUser] = useState<{ id: string; username: string } | null>(null);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true)
+    // 세션 스토리지에서 현재 사용자 정보 가져오기
+    const storedUser = sessionStorage.getItem('currentUser')
+    if (storedUser) {
+      setCurrentUser(JSON.parse(storedUser))
+    }
+  }, [])
+
+  const fetchUsers = async () => {
+    const { data: users, error } = await supabase
+      .from('user')
+      .select('*')
+    if (error) {
+      console.error('Error fetching users:', error)
+      return
+    }
+    setUsers(users || [])
+  }
 
   const fetchReports = async () => {
     const { data: report, error } = await supabase
@@ -44,46 +72,139 @@ export function ReportList() {
   }
 
   const handleObjectionSubmit = async (reportId: string) => {
+    if (!currentUser) {
+      toast({
+        title: "로그인이 필요합니다",
+        description: "이의제기를 작성하려면 로그인이 필요합니다.",
+        variant: "destructive",
+      })
+      setIsDialogOpen(false)
+      return
+    }
+
     try {
       const { error } = await supabase
         .from('report')
-        .update({ objection })
+        .update({ 
+          objection,
+          objection_by: currentUser.username // 이의제기 작성자 추가
+        })
         .eq('id', reportId);
 
       if (error) throw error;
 
       setObjection("");
       setIsDialogOpen(false);
-      fetchReports(); // 목록 새로고침
+      fetchReports();
+      toast({
+        title: "이의제기 제출 완료",
+        description: "이의제기가 성공적으로 제출되었습니다.",
+      })
     } catch (error) {
       console.error('Error submitting objection:', error);
+      toast({
+        title: "이의제기 제출 실패",
+        description: "이의제기를 제출하는 중 오류가 발생했습니다.",
+        variant: "destructive",
+      })
     }
   };
 
-  useEffect(() => {
-    fetchReports()
-
-    // 실시간 구독 설정
-    const channel = supabase
-      .channel('reports_changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'report',
-        },
-        () => {
-          // 데이터 변경 시 전체 목록 다시 로드
-          fetchReports()
-        }
-      )
-      .subscribe()
-
-    return () => {
-      supabase.removeChannel(channel)
+  const handleAgree = async (reportId: string) => {
+    if (!currentUser) {
+      toast({
+        title: "로그인이 필요합니다",
+        description: "이의제기에 동의하려면 로그인이 필요합니다.",
+        variant: "destructive",
+      })
+      return
     }
-  }, [])
+
+    try {
+      const report = reports.find(r => r.id === reportId)
+      if (!report) return
+
+      const currentAgreements = report.agreements || {}
+      if (currentAgreements[currentUser.id]) {
+        toast({
+          title: "이미 동의하셨습니다",
+          description: "이 이의제기에 이미 동의하셨습니다.",
+        })
+        return
+      }
+
+      const newAgreements = {
+        ...currentAgreements,
+        [currentUser.id]: true
+      }
+      
+      const agreedCount = Object.keys(newAgreements).length
+      if (agreedCount === users.length) {
+        const { error: deleteError } = await supabase
+          .from('report')
+          .delete()
+          .eq('id', reportId)
+
+        if (deleteError) throw deleteError
+
+        toast({
+          title: "신고가 삭제되었습니다",
+          description: "모든 사용자의 동의로 신고가 삭제되었습니다.",
+        })
+      } else {
+        const { error: updateError } = await supabase
+          .from('report')
+          .update({ agreements: newAgreements })
+          .eq('id', reportId)
+
+        if (updateError) throw updateError
+
+        toast({
+          title: "동의 완료",
+          description: "이의제기에 동의하셨습니다.",
+        })
+      }
+
+      fetchReports()
+    } catch (error) {
+      console.error('Error agreeing to objection:', error)
+      toast({
+        title: "동의 실패",
+        description: "이의제기에 동의하는 중 오류가 발생했습니다.",
+        variant: "destructive",
+      })
+    }
+  }
+
+  useEffect(() => {
+    if (mounted) {
+      fetchUsers()
+      fetchReports()
+
+      const channel = supabase
+        .channel('reports_changes')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'report',
+          },
+          () => {
+            fetchReports()
+          }
+        )
+        .subscribe()
+
+      return () => {
+        supabase.removeChannel(channel)
+      }
+    }
+  }, [mounted])
+
+  if (!mounted) {
+    return null
+  }
 
   return (
     <div className="space-y-4">
@@ -139,7 +260,27 @@ export function ReportList() {
                   
                   {report.objection && (
                     <div className="mt-3 p-3 bg-gray-50 rounded-md">
-                      <p className="text-sm font-medium text-gray-700 mb-1">이의제기</p>
+                      <div className="flex justify-between items-start mb-2">
+                        <div>
+                          <p className="text-sm font-medium text-gray-700">이의제기</p>
+                          <p className="text-xs text-gray-500">작성자: {report.objection}</p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-gray-500">
+                            {Object.keys(report.agreements || {}).length}/{users.length}명 동의
+                          </span>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="flex items-center gap-1"
+                            onClick={() => handleAgree(report.id)}
+                            disabled={!currentUser || (report.agreements || {})[currentUser.id]}
+                          >
+                            <ThumbsUpIcon className="h-4 w-4" />
+                            동의
+                          </Button>
+                        </div>
+                      </div>
                       <p className="text-sm text-gray-600">{report.objection}</p>
                     </div>
                   )}
@@ -151,7 +292,17 @@ export function ReportList() {
                           variant="outline"
                           size="sm"
                           className="flex items-center gap-1"
-                          onClick={() => setSelectedReport(report)}
+                          onClick={() => {
+                            if (!currentUser) {
+                              toast({
+                                title: "로그인이 필요합니다",
+                                description: "이의제기를 작성하려면 로그인이 필요합니다.",
+                                variant: "destructive",
+                              })
+                              return
+                            }
+                            setSelectedReport(report)
+                          }}
                         >
                           <MessageSquareIcon className="h-4 w-4" />
                           이의제기
