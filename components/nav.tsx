@@ -17,6 +17,7 @@ import { LogOut, User } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { useRouter } from "next/navigation"
 import { useState, useEffect } from "react"
+import { useUser } from "@/contexts/UserContext"
 
 interface NavItem {
   title: string
@@ -29,8 +30,8 @@ const items: NavItem[] = [
     href: "/",
   },
   {
-    title: "신고하기",
-    href: "/report",
+    title: "룰북",
+    href: "/rulebook",
   },
   {
     title: "리더보드",
@@ -42,19 +43,14 @@ export function Nav() {
   const pathname = usePathname()
   const { toast } = useToast()
   const router = useRouter()
-  const [currentUser, setCurrentUser] = useState<{ id: string; username: string } | null>(null)
+  const { currentUser, setCurrentUser } = useUser()
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
     setMounted(true)
-    const storedUser = sessionStorage.getItem('currentUser')
-    if (storedUser) {
-      setCurrentUser(JSON.parse(storedUser))
-    }
   }, [])
 
   const handleLogout = () => {
-    sessionStorage.removeItem('currentUser')
     setCurrentUser(null)
     toast({
       title: "로그아웃 완료",

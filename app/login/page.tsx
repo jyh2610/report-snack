@@ -8,10 +8,12 @@ import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { supabase } from "@/lib/supabase"
 import { useToast } from "@/hooks/use-toast"
+import { useUser } from "@/contexts/UserContext"
 
 export default function LoginPage() {
   const router = useRouter()
   const { toast } = useToast()
+  const { setCurrentUser } = useUser()
   const [username, setUsername] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [mounted, setMounted] = useState(false)
@@ -43,10 +45,11 @@ export default function LoginPage() {
         return
       }
 
-      // 로그인 성공 시 세션 스토리지에 사용자 정보 저장
+      // 로그인 성공 시 세션 스토리지와 Context에 사용자 정보 저장
       if (typeof window !== 'undefined') {
         sessionStorage.setItem('currentUser', JSON.stringify(users))
       }
+      setCurrentUser(users)
       
       toast({
         title: "로그인 성공",

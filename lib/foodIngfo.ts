@@ -1,69 +1,102 @@
-// pages/api/getCertImgList.ts
+// pages/api/getFatsecretFood.ts
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { XMLParser } from 'fast-xml-parser';
 
 interface FoodInfoParams {
   foodNm: string;
-  pageNo?: string;
-  numOfRows?: string;
+  page?: number;
+  max_results?: number;
 }
 
-export async function fetchFoodInfo({ foodNm, pageNo = '1', numOfRows = '20' }: FoodInfoParams) {
-  const serviceKey = process.env.NEXT_PUBLIC_SERVICE_KEY;
-  if (!serviceKey) {
-    throw new Error('Service key is not configured');
+let tokenCache: { access_token: string; expires_at: number } | null = null;
+
+async function getAccessToken(): Promise<string> {
+  const clientId = process.env.NEXT_PUBLIC_FATSECRET_CLIENT_ID;
+  const clientSecret = process.env.NEXT_PUBLIC_FATSECRET_CLIENT_SECRET;
+
+  if (!clientId || !clientSecret) {
+    throw new Error('FATSECRET_CLIENT_ID or CLIENT_SECRET is not configured');
   }
+
+  // 이미 캐시된 토큰이 있고 아직 유효하다면 재사용
+  if (tokenCache && Date.now() < tokenCache.expires_at) {
+    return tokenCache.access_token;
+  }
+
+  const tokenUrl = 'https://oauth.fatsecret.com/connect/token';
+  const body = new URLSearchParams({
+    grant_type: 'client_credentials',
+    scope: 'basic',
+  });
+
+  const response = await fetch(tokenUrl, {
+    method: 'POST',
+    headers: {
+      Authorization:
+        'Basic ' + Buffer.from(`${clientId}:${clientSecret}`).toString('base64'),
+      'Content-Type': 'application/x-www-form-urlencoded',
+    },
+    body: body.toString(),
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`Failed to get token: ${error}`);
+  }
+
+  const data = await response.json();
+  const expiresIn = data.expires_in || 86400;
+
+  tokenCache = {
+    access_token: data.access_token,
+    expires_at: Date.now() + expiresIn * 1000 - 60 * 1000, // 1분 여유
+  };
+
+  return data.access_token;
+}
+
+export async function fetchFatsecretFoodInfo({
+  foodNm,
+  page = 1,
+  max_results = 20,
+}: FoodInfoParams) {
   if (!foodNm.trim()) {
     throw new Error('foodNm parameter is required');
   }
 
+  const token = await getAccessToken();
+
+  const apiUrl = 'https://platform.fatsecret.com/rest/server.api';
   const params = new URLSearchParams({
-    ServiceKey: serviceKey,
-    prdlstNm: foodNm,
-    pageNo,
-    numOfRows
+    method: 'foods.search',
+    search_expression: foodNm,
+    format: 'json',
+    page_number: String(page),
+    max_results: String(max_results),
   });
 
-  const apiUrl = `https://apis.data.go.kr/B553748/CertImgListServiceV3/getCertImgListServiceV3?${params.toString()}`;
+  const response = await fetch(`${apiUrl}?${params}`, {
+    method: 'POST', // 문서에 맞게 POST
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/x-www-form-urlencoded',
+    },
+  });
 
-  try {
-    const response = await fetch(apiUrl, {
-      method: 'GET',
-      headers: {
-        'Accept': 'application/xml',
-      },
-    });
-
-    if (!response.ok) {
-      const text = await response.text();
-      throw new Error(text);
-    }
-
-    const xmlText = await response.text();
-    const parser = new XMLParser({
-      ignoreAttributes: false,
-      attributeNamePrefix: "@_"
-    });
-    
-    const result = parser.parse(xmlText);
-    return result.response;
-  } catch (err: any) {
-    console.error('Error fetching public API:', err);
-    throw err;
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`Failed to fetch food data: ${error}`);
   }
+
+  return await response.json();
 }
 
-// Next.js API 라우트 핸들러
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
-    const { foodNm, pageNo, numOfRows } = req.query;
-    const data = await fetchFoodInfo({
+    const { foodNm, page, max_results } = req.query;
+    const data = await fetchFatsecretFoodInfo({
       foodNm: foodNm as string,
-      pageNo: pageNo as string,
-      numOfRows: numOfRows as string
+      page: page ? parseInt(page as string, 10) : 1,
+      max_results: max_results ? parseInt(max_results as string, 10) : 20,
     });
     return res.status(200).json(data);
   } catch (err: any) {

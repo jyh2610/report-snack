@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/dialog"
 import { useToast } from "@/hooks/use-toast"
 import { useRouter } from "next/navigation"
+import { useUser } from "@/contexts/UserContext"
 
 export interface Report {
   name: string;
@@ -33,21 +34,16 @@ export interface Report {
 export function ReportList() {
   const router = useRouter()
   const { toast } = useToast()
+  const { currentUser } = useUser()
   const [reports, setReports] = useState<Report[]>([]);
   const [selectedReport, setSelectedReport] = useState<Report | null>(null);
   const [objection, setObjection] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [users, setUsers] = useState<{ id: string; username: string }[]>([]);
-  const [currentUser, setCurrentUser] = useState<{ id: string; username: string } | null>(null);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true)
-    // 세션 스토리지에서 현재 사용자 정보 가져오기
-    const storedUser = sessionStorage.getItem('currentUser')
-    if (storedUser) {
-      setCurrentUser(JSON.parse(storedUser))
-    }
   }, [])
 
   const fetchUsers = async () => {
