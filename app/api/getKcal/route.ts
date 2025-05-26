@@ -1,86 +1,71 @@
+// pages/api/getCertImgList.ts
+import type { NextApiRequest, NextApiResponse } from 'next';
+import { XMLParser } from 'fast-xml-parser';
 import { NextRequest, NextResponse } from 'next/server';
 
-let tokenCache: { access_token: string; expires_at: number } | null = null;
-
-async function getAccessToken(): Promise<string> {
-  const clientId = process.env.FATSECRET_CLIENT_ID;
-  const clientSecret = process.env.FATSECRET_CLIENT_SECRET;
-
-  if (!clientId || !clientSecret) {
-    throw new Error('FATSECRET_CLIENT_ID or CLIENT_SECRET is not configured');
-  }
-
-  if (tokenCache && Date.now() < tokenCache.expires_at) {
-    return tokenCache.access_token;
-  }
-
-  const tokenUrl = 'https://oauth.fatsecret.com/connect/token';
-  const body = new URLSearchParams({
-    grant_type: 'client_credentials',
-    scope: 'basic',
-  });
-
-  const response = await fetch(tokenUrl, {
-    method: 'POST',
-    headers: {
-      Authorization: 'Basic ' + Buffer.from(`${clientId}:${clientSecret}`).toString('base64'),
-      'Content-Type': 'application/x-www-form-urlencoded',
-    },
-    body: body.toString(),
-  });
-
-  if (!response.ok) {
-    const error = await response.text();
-    throw new Error(`Failed to get token: ${error}`);
-  }
-
-  const data = await response.json();
-  const expiresIn = data.expires_in || 86400;
-
-  tokenCache = {
-    access_token: data.access_token,
-    expires_at: Date.now() + expiresIn * 1000 - 60 * 1000,
-  };
-
-  return data.access_token;
+interface FoodInfoParams {
+  foodNm: string;
+  pageNo?: string;
+  numOfRows?: string;
 }
 
-export async function GET(req: NextRequest) {
-  const { searchParams } = new URL(req.url);
-  const foodNm = searchParams.get('foodNm');
-  const page = searchParams.get('page') || '1';
-  const max_results = searchParams.get('max_results') || '20';
-
-  if (!foodNm) {
-    return NextResponse.json({ error: 'foodNm 파라미터가 필요합니다.' }, { status: 400 });
+export async function fetchFoodInfo({ foodNm, pageNo = '1', numOfRows = '20' }: FoodInfoParams) {
+  const serviceKey = process.env.NEXT_PUBLIC_SERVICE_KEY;
+  if (!serviceKey) {
+    throw new Error('Service key is not configured');
+  }
+  if (!foodNm.trim()) {
+    throw new Error('foodNm parameter is required');
   }
 
+  const params = new URLSearchParams({
+    ServiceKey: serviceKey,
+    prdlstNm: foodNm,
+    pageNo,
+    numOfRows
+  });
+
+  const apiUrl = `https://apis.data.go.kr/B553748/CertImgListServiceV3/getCertImgListServiceV3?${params.toString()}`;
+
   try {
-    const token = await getAccessToken();
-
-    const apiUrl = 'https://platform.fatsecret.com/rest/server.api';
-    const params = new URLSearchParams({
-      method: 'foods.search',
-      search_expression: foodNm,
-      format: 'json',
-      page_number: String(page),
-      max_results: String(max_results),
-    });
-
-    const response = await fetch(`${apiUrl}?${params}`, {
+    const response = await fetch(apiUrl, {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/x-www-form-urlencoded',
+        'Accept': 'application/xml',
       },
     });
 
     if (!response.ok) {
-      const error = await response.text();
-      throw new Error(`Failed to fetch food data: ${error}`);
+      const text = await response.text();
+      throw new Error(text);
     }
 
-    const data = await response.json();
+    const xmlText = await response.text();
+    const parser = new XMLParser({
+      ignoreAttributes: false,
+      attributeNamePrefix: "@_"
+    });
+    
+    const result = parser.parse(xmlText);
+    return result.response;
+  } catch (err: any) {
+    console.error('Error fetching public API:', err);
+    throw err;
+  }
+}
+
+export async function GET(req: NextRequest) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const foodNm = searchParams.get('foodNm') || '';
+    const pageNo = searchParams.get('pageNo') || '1';
+    const numOfRows = searchParams.get('numOfRows') || '20';
+
+    const data = await fetchFoodInfo({
+      foodNm,
+      pageNo,
+      numOfRows
+    });
     return NextResponse.json(data);
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });

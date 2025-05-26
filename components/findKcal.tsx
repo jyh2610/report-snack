@@ -1,26 +1,19 @@
 'use client';
 import { useEffect, useState } from 'react';
-import Modal from 'react-modal';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 
-interface FatsecretFood {
-  food_id: string;
-  food_name: string;
-  food_type: string;
-  food_url: string;
-  brand_name?: string;
-}
-
-interface FatsecretFoodNutrient {
-  serving_id: string;
-  serving_description: string;
-  metric_serving_amount: string;
-  metric_serving_unit: string;
-  number_of_units: string;
-  measurement_description: string;
-  calories: string;
-  carbohydrate: string;
-  protein: string;
-  fat: string;
+interface CertFoodItem {
+  prdlstNm: string;
+  imgurl1?: string;
+  nutrient?: string;
+  rawmtrl?: string;
+  allergy?: string;
 }
 
 interface FoodData {
@@ -37,13 +30,10 @@ interface FindKcalProps {
 }
 
 const FindKcal = ({ foodNm, onSelect }: FindKcalProps) => {
-  const [foodList, setFoodList] = useState<FatsecretFood[]>([]);
-  const [nutrients, setNutrients] = useState<FatsecretFoodNutrient[]>([]);
-  const [selectedServing, setSelectedServing] = useState<FatsecretFoodNutrient | null>(null);
+  const [foodList, setFoodList] = useState<CertFoodItem[]>([]);
+  const [selectedFood, setSelectedFood] = useState<CertFoodItem | null>(null);
   const [foodListLoading, setFoodListLoading] = useState(false);
-  const [detailLoading, setDetailLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [selectedFood, setSelectedFood] = useState<FatsecretFood | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   useEffect(() => {
@@ -55,8 +45,8 @@ const FindKcal = ({ foodNm, onSelect }: FindKcalProps) => {
         const res = await fetch(`/api/getKcal?foodNm=${encodeURIComponent(foodNm)}`);
         if (!res.ok) throw new Error('음식 정보를 불러오지 못했습니다.');
         const data = await res.json();
-        const foods = data.foods?.food || [];
-        setFoodList(Array.isArray(foods) ? foods : [foods]);
+        const items = data.body?.items?.item || [];
+        setFoodList(Array.isArray(items) ? items : [items]);
       } catch (err: any) {
         setError(`음식 검색 중 오류: ${err.message}`);
       } finally {
@@ -66,43 +56,22 @@ const FindKcal = ({ foodNm, onSelect }: FindKcalProps) => {
     fetchData();
   }, [foodNm]);
 
-  const handleSelect = async (food: FatsecretFood) => {
-    setSelectedFood(food);
+  const handleSelect = (item: CertFoodItem) => {
+    setSelectedFood(item);
     setIsModalOpen(true);
-    setDetailLoading(true);
-    setError(null);
-    try {
-      const res = await fetch(`/api/getFatsecretFoodDetail?food_id=${food.food_id}`);
-      const detail = await res.json();
-      const servings = detail.food?.servings?.serving || [];
-      const servingArr = Array.isArray(servings) ? servings : [servings];
-      setNutrients(servingArr);
-      setSelectedServing(servingArr[0] || null);
-    } catch (err: any) {
-      setError(`상세 정보 조회 중 오류: ${err.message}`);
-    } finally {
-      setDetailLoading(false);
-    }
-  };
-
-  const handleConfirm = () => {
-    if (selectedFood && selectedServing) {
+    if (item.nutrient) {
+      const kcalMatch = item.nutrient.match(/열량\s*(\d+)kcal/i);
+      const carbMatch = item.nutrient.match(/탄수화물\s*(\d+)g/i);
+      const proteinMatch = item.nutrient.match(/단백질\s*(\d+)g/i);
+      const fatMatch = item.nutrient.match(/지방\s*(\d+)g/i);
       onSelect({
-        foodNm: selectedFood.food_name,
-        kcal: Number(selectedServing.calories),
-        protein: Number(selectedServing.protein),
-        fat: Number(selectedServing.fat),
-        carbohydrate: Number(selectedServing.carbohydrate),
+        foodNm: item.prdlstNm,
+        kcal: kcalMatch ? Number(kcalMatch[1]) : 0,
+        protein: proteinMatch ? Number(proteinMatch[1]) : 0,
+        fat: fatMatch ? Number(fatMatch[1]) : 0,
+        carbohydrate: carbMatch ? Number(carbMatch[1]) : 0,
       });
     }
-    closeModal();
-  };
-
-  const closeModal = () => {
-    setIsModalOpen(false);
-    setSelectedFood(null);
-    setNutrients([]);
-    setSelectedServing(null);
   };
 
   return (
@@ -116,79 +85,65 @@ const FindKcal = ({ foodNm, onSelect }: FindKcalProps) => {
         <div className="text-gray-500">검색 결과가 없습니다.</div>
       ) : (
         <div className="grid gap-4">
-          {foodList.map((item, idx) => (
+          {foodList.map((item: CertFoodItem, idx) => (
             <div
               key={idx}
               className="border p-4 rounded-lg cursor-pointer hover:bg-gray-50"
               onClick={() => handleSelect(item)}
             >
               <div>
-                <h3 className="font-semibold">{item.food_name}</h3>
-                {item.brand_name && <div className="text-xs text-gray-500">{item.brand_name}</div>}
+                <h3 className="font-semibold">{item.prdlstNm}</h3>
+                {item.nutrient && (
+                  <div className="text-xs text-gray-500">{item.nutrient}</div>
+                )}
+                {item.imgurl1 && (
+                  <img src={item.imgurl1} alt={item.prdlstNm} className="w-20 h-20 object-cover rounded mt-2" />
+                )}
               </div>
             </div>
           ))}
         </div>
       )}
 
-      <Modal
-        isOpen={isModalOpen}
-        onRequestClose={closeModal}
-        className="fixed inset-0 flex items-center justify-center p-4"
-        overlayClassName="fixed inset-0 bg-black bg-opacity-50"
-        contentLabel="식품 상세 정보"
-        ariaHideApp={false}
-      >
-        <div className="bg-white rounded-lg p-6 max-w-2xl w-full">
-          <div className="flex justify-between items-start mb-4">
-            <h2 className="text-2xl font-bold">{selectedFood?.food_name}</h2>
-            <button onClick={closeModal} className="text-gray-500 hover:text-gray-700">✕</button>
-          </div>
-
-          {detailLoading ? (
-            <div>상세 정보 로딩 중...</div>
-          ) : selectedServing && nutrients.length > 0 ? (
-            <>
-              <div className="mb-4">
-                <h3 className="font-semibold mb-2">서빙 선택</h3>
-                <select
-                  className="border p-2 rounded w-full"
-                  value={selectedServing.serving_id}
-                  onChange={(e) => {
-                    const serving = nutrients.find(s => s.serving_id === e.target.value);
-                    if (serving) setSelectedServing(serving);
-                  }}
+      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+        <DialogContent className="max-w-2xl w-full">
+          <DialogHeader>
+            <DialogTitle>{selectedFood?.prdlstNm}</DialogTitle>
+          </DialogHeader>
+          {selectedFood && (
+            <div className="flex flex-col md:flex-row gap-4 items-start">
+              {selectedFood.imgurl1 && (
+                <img
+                  src={selectedFood.imgurl1}
+                  alt={selectedFood.prdlstNm}
+                  className="w-full md:w-40 h-20 object-cover rounded mb-2 md:mb-0 flex-shrink-0 border"
+                  style={{ maxWidth: 160 }}
+                />
+              )}
+              <div className="flex-1 space-y-2">
+                <div className="mb-1 border-b pb-1">
+                  <strong>영양 정보:</strong>
+                  <div className="text-sm text-gray-700 mt-1">{selectedFood.nutrient || '정보 없음'}</div>
+                </div>
+                <div className="mb-1 border-b pb-1">
+                  <strong>원재료:</strong>
+                  <div className="text-sm text-gray-700 mt-1">{selectedFood.rawmtrl || '정보 없음'}</div>
+                </div>
+                <div className="mb-1">
+                  <strong>알레르기:</strong>
+                  <div className="text-sm text-gray-700 mt-1">{selectedFood.allergy || '정보 없음'}</div>
+                </div>
+                <button
+                  onClick={() => setIsModalOpen(false)}
+                  className="mt-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
                 >
-                  {nutrients.map((s, i) => (
-                    <option key={i} value={s.serving_id}>
-                      {s.serving_description}
-                    </option>
-                  ))}
-                </select>
+                  닫기
+                </button>
               </div>
-
-              <div className="space-y-2">
-                <p>칼로리: {selectedServing.calories} kcal</p>
-                <p>탄수화물: {selectedServing.carbohydrate} g</p>
-                <p>단백질: {selectedServing.protein} g</p>
-                <p>지방: {selectedServing.fat} g</p>
-              </div>
-              <div className="mt-4 text-xs text-gray-500">
-                {selectedServing.serving_description}
-              </div>
-
-              <button
-                onClick={handleConfirm}
-                className="mt-6 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-              >
-                선택 완료
-              </button>
-            </>
-          ) : (
-            <div>서빙 정보가 없습니다.</div>
+            </div>
           )}
-        </div>
-      </Modal>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

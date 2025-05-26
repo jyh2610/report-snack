@@ -19,7 +19,13 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { eventBus } from "@/lib/event-bus"
-import Modal from 'react-modal';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
 import FindKcal from "./findKcal"
 import { useRouter } from "next/navigation"
 
@@ -274,19 +280,19 @@ export function ReportForm() {
           </form>
         </CardContent>
       </Card>
-      <Modal
-        isOpen={success}
-        onRequestClose={() => setSuccess(false)}
-        className="fixed inset-0 flex items-center justify-center p-4 bg-black/50"
-        overlayClassName="fixed inset-0 bg-black/50"
-      >
-        <div className="bg-white rounded-lg p-6 max-w-2xl w-full max-h-[80vh] overflow-y-auto">
-          <FindKcal 
-            foodNm={formData.snack_kind} 
-            onSelect={handleFoodSelect}
-          />
-        </div>
-      </Modal>
+      <Dialog open={success} onOpenChange={setSuccess}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>칼로리 찾기</DialogTitle>
+          </DialogHeader>
+          <div className="bg-white rounded-lg max-w-2xl w-full max-h-[50vh] overflow-y-auto">
+            <FindKcal 
+              foodNm={formData.snack_kind} 
+              onSelect={handleFoodSelect}
+            />
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   )
 }

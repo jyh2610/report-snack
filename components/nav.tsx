@@ -34,6 +34,10 @@ const items: NavItem[] = [
     href: "/rulebook",
   },
   {
+    title: "신고하기",
+    href: "/report",
+  },
+  {
     title: "리더보드",
     href: "/leaderboard",
   },
