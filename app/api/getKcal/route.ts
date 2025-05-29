@@ -9,7 +9,7 @@ interface FoodInfoParams {
   numOfRows?: string;
 }
 
-export async function fetchFoodInfo({ foodNm, pageNo = '1', numOfRows = '20' }: FoodInfoParams) {
+async function fetchFoodInfo({ foodNm, pageNo = '1', numOfRows = '20' }: FoodInfoParams) {
   const serviceKey = process.env.NEXT_PUBLIC_SERVICE_KEY;
   if (!serviceKey) {
     throw new Error('Service key is not configured');
