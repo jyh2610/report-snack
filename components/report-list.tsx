@@ -83,7 +83,7 @@ export function ReportList() {
         .from('report')
         .update({ 
           objection,
-          objection_by: currentUser.username // 이의제기 작성자 추가
+          informant: currentUser.username // 이의제기 작성자 추가
         })
         .eq('id', reportId);
 
@@ -259,7 +259,7 @@ export function ReportList() {
                       <div className="flex justify-between items-start mb-2">
                         <div>
                           <p className="text-sm font-medium text-gray-700">이의제기</p>
-                          <p className="text-xs text-gray-500">작성자: {report.objection}</p>
+                          <p className="text-xs text-gray-500">작성자: {report.informant}</p>
                         </div>
                         <div className="flex items-center gap-2">
                           <span className="text-xs text-gray-500">
