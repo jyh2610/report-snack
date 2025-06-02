@@ -6,6 +6,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Search, Trophy } from "lucide-react"
 import { Skeleton } from "@/components/ui/skeleton"
+import { supabase } from "@/lib/supabase"
+
 interface Snack {
   prdlstNm: string
   mnfcturCo: string
@@ -31,8 +33,38 @@ export default function SnackBook() {
   const [monthlyWinners, setMonthlyWinners] = useState<MonthlyWinners | null>(null)
 
   useEffect(() => {
+    if (typeof window !== "undefined" && "Notification" in window) {
+      if (Notification.permission === "default") {
+        Notification.requestPermission();
+      }
+    }
+  }, []);
+
+  useEffect(() => {
     fetchMonthlyWinner()
   }, [])
+
+  useEffect(() => {
+    const channel = supabase
+      .channel("reports_changes")
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "report",
+        },
+        (payload) => {
+          const reportUser = payload.new.name;
+          showReportNotification(reportUser);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
 
   const fetchMonthlyWinner = async () => {
     try {
@@ -80,6 +112,17 @@ export default function SnackBook() {
     }
 
     return nutrientMap
+  }
+
+  function showReportNotification(reportUser: string) {
+    if (typeof window !== "undefined" && "Notification" in window) {
+      if (Notification.permission === "granted") {
+        new Notification("신고 알림", {
+          body: `${reportUser}님이 새로운 신고를 했습니다!`,
+          icon: "/icon.png", // 원하는 아이콘 경로
+        });
+      }
+    }
   }
 
   return (
