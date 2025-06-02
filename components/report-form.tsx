@@ -88,11 +88,40 @@ export function ReportForm() {
   }, [])
 
   useEffect(() => {
+    // 권한 요청
     if (typeof window !== "undefined" && "Notification" in window) {
       if (Notification.permission === "default") {
         Notification.requestPermission();
       }
     }
+
+    // 실시간 신고 감지
+    const channel = supabase
+      .channel("reports_changes")
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "report",
+        },
+        (payload) => {
+          const reportUser = payload.new.name;
+          // 내 신고는 제외하고 싶으면 아래 조건 추가
+          // if (reportUser === formData.informant) return;
+          if (Notification.permission === "granted") {
+            new Notification("신고 알림", {
+              body: `${reportUser}님이 새로운 신고를 했습니다!`,
+              icon: "/icon.png",
+            });
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
