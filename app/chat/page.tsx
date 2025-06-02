@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
-import { Send, User } from "lucide-react"
+import { Send, User, Users } from "lucide-react"
 import { v4 as uuidv4 } from 'uuid'
 import Pusher from 'pusher-js'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
@@ -17,12 +17,18 @@ interface Message {
   timestamp: number
 }
 
+interface User {
+  id: string
+  nickname: string
+}
+
 export default function ChatPage() {
   const [messages, setMessages] = useState<Message[]>([])
   const [message, setMessage] = useState("")
   const [isConnected, setIsConnected] = useState(false)
   const [nickname, setNickname] = useState("")
   const [showNicknameDialog, setShowNicknameDialog] = useState(true)
+  const [onlineUsers, setOnlineUsers] = useState<User[]>([])
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const userId = useRef(uuidv4())
   const pusherRef = useRef<Pusher | null>(null)
@@ -40,16 +46,46 @@ export default function ChatPage() {
 
     const pusher = new Pusher(process.env.NEXT_PUBLIC_PUSHER_KEY || '', {
       cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER || '',
+      authEndpoint: '/api/pusher/auth',
+      auth: {
+        params: {
+          user_id: userId.current,
+          user_info: JSON.stringify({ nickname })
+        }
+      }
     })
 
-    const channel = pusher.subscribe('chat')
+    const channel = pusher.subscribe('presence-chat')
+    
+    fetchChatHistory()
     
     channel.bind('message', (data: Message) => {
       setMessages(prev => [...prev, data])
     })
 
-    channel.bind('pusher:subscription_succeeded', () => {
+    channel.bind('pusher:subscription_succeeded', (members: any) => {
       setIsConnected(true)
+      const users: User[] = []
+      members.each((member: any) => {
+        const userInfo = JSON.parse(member.info.user_info)
+        users.push({
+          id: member.id,
+          nickname: userInfo.nickname
+        })
+      })
+      setOnlineUsers(users)
+    })
+
+    channel.bind('pusher:member_added', (member: any) => {
+      const userInfo = JSON.parse(member.info.user_info)
+      setOnlineUsers(prev => [...prev, {
+        id: member.id,
+        nickname: userInfo.nickname
+      }])
+    })
+
+    channel.bind('pusher:member_removed', (member: any) => {
+      setOnlineUsers(prev => prev.filter(user => user.id !== member.id))
     })
 
     channel.bind('pusher:subscription_error', () => {
@@ -104,6 +140,18 @@ export default function ChatPage() {
     }
   }
 
+  const fetchChatHistory = async (limit?: number) => {
+    try {
+      const url = limit ? `/api/chat?limit=${limit}` : '/api/chat'
+      const response = await fetch(url)
+      if (!response.ok) throw new Error('채팅 로그를 불러오지 못했습니다.')
+      const data = await response.json()
+      setMessages(data)
+    } catch (error) {
+      console.error('채팅 로그 조회 중 오류:', error)
+    }
+  }
+
   return (
     <>
       <Dialog open={showNicknameDialog} onOpenChange={setShowNicknameDialog}>
@@ -138,55 +186,95 @@ export default function ChatPage() {
                 ({nickname})
               </span>
             </div>
-            <div className="flex items-center gap-2">
-              <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`} />
-              <span className="text-sm text-muted-foreground">
-                {isConnected ? '연결됨' : '연결 끊김'}
-              </span>
+            <div className="flex items-center gap-4">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => fetchChatHistory(1000)}
+              >
+                전체 로그 보기
+              </Button>
+              <div className="flex items-center gap-2">
+                <Users className="h-4 w-4" />
+                <span className="text-sm text-muted-foreground">
+                  {onlineUsers.length}명 접속 중
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`} />
+                <span className="text-sm text-muted-foreground">
+                  {isConnected ? '연결됨' : '연결 끊김'}
+                </span>
+              </div>
             </div>
           </div>
 
-          <div className="h-[600px] overflow-y-auto mb-4 space-y-4 p-4 bg-muted/50 rounded-lg">
-            {messages.map((msg) => (
-              <div
-                key={msg.id}
-                className={`flex ${msg.sender === userId.current ? 'justify-end' : 'justify-start'}`}
-              >
-                <div
-                  className={`max-w-[70%] rounded-lg p-3 ${
-                    msg.sender === userId.current
-                      ? 'bg-primary text-primary-foreground'
-                      : 'bg-muted'
-                  }`}
-                >
-                  <div className="flex items-center gap-2 mb-1">
-                    <User className="h-3 w-3" />
-                    <span className="text-xs font-medium">
-                      {msg.nickname}
-                    </span>
+          <div className="flex gap-4">
+            <div className="flex-1">
+              <div className="h-[600px] overflow-y-auto mb-4 space-y-4 p-4 bg-muted/50 rounded-lg">
+                {messages.map((msg) => (
+                  <div
+                    key={msg.id}
+                    className={`flex ${msg.sender === userId.current ? 'justify-end' : 'justify-start'}`}
+                  >
+                    <div
+                      className={`max-w-[70%] rounded-lg p-3 ${
+                        msg.sender === userId.current
+                          ? 'bg-primary text-primary-foreground'
+                          : 'bg-muted'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 mb-1">
+                        <User className="h-3 w-3" />
+                        <span className="text-xs font-medium">
+                          {msg.nickname}
+                        </span>
+                      </div>
+                      <p className="text-sm">{msg.content}</p>
+                      <p className="text-xs mt-1 opacity-70">
+                        {new Date(msg.timestamp).toLocaleTimeString()}
+                      </p>
+                    </div>
                   </div>
-                  <p className="text-sm">{msg.content}</p>
-                  <p className="text-xs mt-1 opacity-70">
-                    {new Date(msg.timestamp).toLocaleTimeString()}
-                  </p>
-                </div>
+                ))}
+                <div ref={messagesEndRef} />
               </div>
-            ))}
-            <div ref={messagesEndRef} />
-          </div>
 
-          <form onSubmit={sendMessage} className="flex gap-2">
-            <Input
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              placeholder="메시지를 입력하세요..."
-              className="flex-1"
-            />
-            <Button type="submit" disabled={!isConnected}>
-              <Send className="h-4 w-4 mr-2" />
-              전송
-            </Button>
-          </form>
+              <form onSubmit={sendMessage} className="flex gap-2">
+                <Input
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                  placeholder="메시지를 입력하세요..."
+                  className="flex-1"
+                />
+                <Button type="submit" disabled={!isConnected}>
+                  <Send className="h-4 w-4 mr-2" />
+                  전송
+                </Button>
+              </form>
+            </div>
+
+            <Card className="w-64 p-4">
+              <h3 className="font-semibold mb-3 flex items-center gap-2">
+                <Users className="h-4 w-4" />
+                접속자 목록
+              </h3>
+              <div className="space-y-2">
+                {onlineUsers.map((user) => (
+                  <div
+                    key={user.id}
+                    className="flex items-center gap-2 text-sm p-2 rounded-md bg-muted/50"
+                  >
+                    <User className="h-3 w-3" />
+                    <span>{user.nickname}</span>
+                    {user.id === userId.current && (
+                      <span className="text-xs text-muted-foreground">(나)</span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </Card>
+          </div>
         </Card>
       </div>
     </>
