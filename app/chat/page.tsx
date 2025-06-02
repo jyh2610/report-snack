@@ -4,10 +4,11 @@ import { useState, useEffect, useRef } from 'react'
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
-import { Send, User, Users } from "lucide-react"
+import { Send, User, Users, Loader2 } from "lucide-react"
 import { v4 as uuidv4 } from 'uuid'
 import Pusher from 'pusher-js'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
+import { motion, AnimatePresence } from "framer-motion"
 
 interface Message {
   id: string
@@ -32,6 +33,7 @@ export default function ChatPage() {
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const userId = useRef(uuidv4())
   const pusherRef = useRef<Pusher | null>(null)
+  const [isSending, setIsSending] = useState(false)
 
   useEffect(() => {
     const savedNickname = localStorage.getItem('chatNickname')
@@ -113,8 +115,9 @@ export default function ChatPage() {
 
   const sendMessage = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!message.trim()) return
+    if (!message.trim() || isSending) return
 
+    setIsSending(true)
     const newMessage: Message = {
       id: uuidv4(),
       content: message,
@@ -137,6 +140,8 @@ export default function ChatPage() {
       setMessage("")
     } catch (error) {
       console.error('메시지 전송 중 오류:', error)
+    } finally {
+      setIsSending(false)
     }
   }
 
@@ -212,31 +217,40 @@ export default function ChatPage() {
           <div className="flex gap-4">
             <div className="flex-1">
               <div className="h-[600px] overflow-y-auto mb-4 space-y-4 p-4 bg-muted/50 rounded-lg">
-                {messages.map((msg) => (
-                  <div
-                    key={msg.id}
-                    className={`flex ${msg.sender === userId.current ? 'justify-end' : 'justify-start'}`}
-                  >
-                    <div
-                      className={`max-w-[70%] rounded-lg p-3 ${
-                        msg.sender === userId.current
-                          ? 'bg-primary text-primary-foreground'
-                          : 'bg-muted'
-                      }`}
+                <AnimatePresence>
+                  {messages.map((msg) => (
+                    <motion.div
+                      key={msg.id}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -20 }}
+                      transition={{ duration: 0.3 }}
+                      className={`flex ${msg.sender === userId.current ? 'justify-end' : 'justify-start'}`}
                     >
-                      <div className="flex items-center gap-2 mb-1">
-                        <User className="h-3 w-3" />
-                        <span className="text-xs font-medium">
-                          {msg.nickname}
-                        </span>
-                      </div>
-                      <p className="text-sm">{msg.content}</p>
-                      <p className="text-xs mt-1 opacity-70">
-                        {new Date(msg.timestamp).toLocaleTimeString()}
-                      </p>
-                    </div>
-                  </div>
-                ))}
+                      <motion.div
+                        initial={{ scale: 0.8 }}
+                        animate={{ scale: 1 }}
+                        transition={{ type: "spring", stiffness: 200, damping: 20 }}
+                        className={`max-w-[70%] rounded-lg p-3 ${
+                          msg.sender === userId.current
+                            ? 'bg-primary text-primary-foreground'
+                            : 'bg-muted'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 mb-1">
+                          <User className="h-3 w-3" />
+                          <span className="text-xs font-medium">
+                            {msg.nickname}
+                          </span>
+                        </div>
+                        <p className="text-sm">{msg.content}</p>
+                        <p className="text-xs mt-1 opacity-70">
+                          {new Date(msg.timestamp).toLocaleTimeString()}
+                        </p>
+                      </motion.div>
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
                 <div ref={messagesEndRef} />
               </div>
 
@@ -246,10 +260,24 @@ export default function ChatPage() {
                   onChange={(e) => setMessage(e.target.value)}
                   placeholder="메시지를 입력하세요..."
                   className="flex-1"
+                  disabled={isSending}
                 />
-                <Button type="submit" disabled={!isConnected}>
-                  <Send className="h-4 w-4 mr-2" />
-                  전송
+                <Button 
+                  type="submit" 
+                  disabled={!isConnected || isSending}
+                  className="min-w-[100px]"
+                >
+                  {isSending ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      전송 중...
+                    </>
+                  ) : (
+                    <>
+                      <Send className="h-4 w-4 mr-2" />
+                      전송
+                    </>
+                  )}
                 </Button>
               </form>
             </div>
