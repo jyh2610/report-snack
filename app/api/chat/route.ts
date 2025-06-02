@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
 import Pusher from 'pusher'
 import { createClient } from '@supabase/supabase-js'
+import { useState, useEffect, useRef } from 'react'
+import { v4 as uuidv4 } from 'uuid'
 
 // Supabase 클라이언트 설정 로깅
 console.log('Supabase 설정:', {
@@ -28,6 +30,18 @@ const pusher = new Pusher({
   cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER || '',
   useTLS: true
 })
+
+// userId를 useRef로만 쓰지 말고, localStorage에도 저장
+const [userId, setUserId] = useState<string | null>(null)
+
+useEffect(() => {
+  let savedId = localStorage.getItem('chatUserId')
+  if (!savedId) {
+    savedId = uuidv4()
+    localStorage.setItem('chatUserId', savedId)
+  }
+  setUserId(savedId)
+}, [])
 
 export async function POST(request: Request) {
   try {
