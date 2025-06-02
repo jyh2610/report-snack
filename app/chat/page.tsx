@@ -306,7 +306,9 @@ export default function ChatPage() {
                         </div>
                         <p className="text-sm">{msg.content}</p>
                         <p className="text-xs mt-1 opacity-70">
-                          {new Date(msg.timestamp).toLocaleTimeString()}
+                          {msg.timestamp
+                            ? new Date(Number(msg.timestamp)).toLocaleTimeString()
+                            : ''}
                         </p>
                       </motion.div>
                     </motion.div>
