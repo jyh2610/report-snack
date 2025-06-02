@@ -9,24 +9,26 @@ const supabase = createClient(
 export async function GET() {
   try {
     const today = new Date()
-    const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1)
     
     const { data, error } = await supabase
       .from('user')
       .select('id, username, score')
+      .gte('score', 0)  // 0점 이상인 사용자만 선택
       .order('score', { ascending: false })
-      .limit(1)
-      .single()
 
     if (error) throw error
 
+    // API 응답 구조 수정
     return NextResponse.json({
-      winner: data,
+      winners: data || [], // 데이터가 없을 경우 빈 배열 반환
       month: today.getMonth() + 1
     })
   } catch (error) {
     return NextResponse.json(
-      { error: '월간 우승자 정보를 가져오는데 실패했습니다' },
+      { 
+        winners: [], // 에러 발생 시에도 빈 배열 반환
+        month: new Date().getMonth() + 1 
+      },
       { status: 500 }
     )
   }

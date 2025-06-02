@@ -17,6 +17,10 @@ interface MonthlyWinner {
   id: string
   username: string
   score: number
+}
+
+interface MonthlyWinners {
+  winners: MonthlyWinner[]
   month: number
 }
 
@@ -24,7 +28,7 @@ export default function SnackBook() {
   const [searchQuery, setSearchQuery] = useState("")
   const [snacks, setSnacks] = useState<Snack[]>([])
   const [loading, setLoading] = useState(false)
-  const [monthlyWinner, setMonthlyWinner] = useState<MonthlyWinner | null>(null)
+  const [monthlyWinners, setMonthlyWinners] = useState<MonthlyWinners | null>(null)
 
   useEffect(() => {
     fetchMonthlyWinner()
@@ -34,7 +38,7 @@ export default function SnackBook() {
     try {
       const response = await fetch('/api/monthly-winner')
       const data = await response.json()
-      setMonthlyWinner(data)
+      setMonthlyWinners(data)
     } catch (error) {
       console.error('월간 우승자 정보를 가져오는데 실패했습니다:', error)
     }
@@ -60,27 +64,31 @@ export default function SnackBook() {
       <div className="max-w-4xl mx-auto">
         <h1 className="text-3xl font-bold mb-8 text-center">간식 도감</h1>
 
-        {monthlyWinner && (
-          <Card className="mb-8 bg-gradient-to-r from-yellow-400 to-yellow-600 text-white">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="text-2xl">
-                    {monthlyWinner.month}월의 왕
-                  </CardTitle>
-                  <CardDescription className="text-white/80">
-                    {monthlyWinner.username}님
-                  </CardDescription>
-                </div>
-                <Trophy className="h-12 w-12" />
-              </div>
-            </CardHeader>
-            <CardContent>
-              <p className="text-lg">
-                총 점수: {monthlyWinner.score}점
-              </p>
-            </CardContent>
-          </Card>
+        {monthlyWinners && monthlyWinners.winners.length > 0 && (
+          <div className="mb-8">
+            <h2 className="text-2xl font-bold mb-4 text-center">
+              {monthlyWinners.month}월의 왕들
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {monthlyWinners.winners.map((winner) => (
+                <Card key={winner.id} className="bg-gradient-to-r from-yellow-400 to-yellow-600 text-white">
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <CardTitle className="text-xl">
+                          {winner.username}님
+                        </CardTitle>
+                        <CardDescription className="text-white/80">
+                          {winner.score}점
+                        </CardDescription>
+                      </div>
+                      <Trophy className="h-8 w-8" />
+                    </div>
+                  </CardHeader>
+                </Card>
+              ))}
+            </div>
+          </div>
         )}
         
         <div className="flex gap-2 mb-8">
