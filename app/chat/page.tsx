@@ -32,9 +32,18 @@ export default function ChatPage() {
   const [showNicknameDialog, setShowNicknameDialog] = useState(true)
   const [onlineUsers, setOnlineUsers] = useState<User[]>([])
   const messagesEndRef = useRef<HTMLDivElement>(null)
-  const userId = useRef(uuidv4())
+  const userId = useRef<string | null>(null)
   const pusherRef = useRef<Pusher | null>(null)
   const [isSending, setIsSending] = useState(false)
+
+  useEffect(() => {
+    let savedId = localStorage.getItem('chatUserId')
+    if (!savedId) {
+      savedId = uuidv4()
+      localStorage.setItem('chatUserId', savedId)
+    }
+    userId.current = savedId
+  }, [])
 
   useEffect(() => {
     const savedNickname = localStorage.getItem('chatNickname')
@@ -251,6 +260,14 @@ export default function ChatPage() {
               <span className="text-sm text-muted-foreground">
                 ({nickname})
               </span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowNicknameDialog(true)}
+                className="ml-2"
+              >
+                닉네임 변경
+              </Button>
             </div>
             <div className="flex items-center gap-4">
               <Button
