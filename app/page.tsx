@@ -49,7 +49,7 @@ export default function SnackBook() {
     
     setLoading(true)
     try {
-      const response = await fetch(`/api/snack-search?query=${encodeURIComponent(searchQuery)}`)
+      const response = await fetch(`/api/getKcal?query=${encodeURIComponent(searchQuery)}`)
       const data = await response.json()
       setSnacks(data)
     } catch (error) {
