@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Search, Trophy } from "lucide-react"
-
+import { Skeleton } from "@/components/ui/skeleton"
 interface Snack {
   prdlstNm: string
   mnfcturCo: string
@@ -87,25 +87,46 @@ export default function SnackBook() {
       <div className="max-w-4xl mx-auto">
         <h1 className="text-3xl font-bold mb-8 text-center">간식 도감</h1>
 
-        {monthlyWinners && monthlyWinners.winners.length > 0 && (
+        {monthlyWinners ? (
+          monthlyWinners.winners.length > 0 && (
+            <div className="mb-8">
+              <h2 className="text-2xl font-bold mb-4 text-center">
+                {monthlyWinners.month}월의 왕들
+              </h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {monthlyWinners.winners.map((winner) => (
+                  <Card key={winner.id} className="bg-gradient-to-r from-yellow-400 to-yellow-600 text-white">
+                    <CardHeader>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <CardTitle className="text-xl">
+                            {winner.username}님
+                          </CardTitle>
+                          <CardDescription className="text-white/80">
+                            {winner.score}점
+                          </CardDescription>
+                        </div>
+                        <Trophy className="h-8 w-8" />
+                      </div>
+                    </CardHeader>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          )
+        ) : (
           <div className="mb-8">
-            <h2 className="text-2xl font-bold mb-4 text-center">
-              {monthlyWinners.month}월의 왕들
-            </h2>
+            <Skeleton className="h-8 w-48 mx-auto mb-4" />
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {monthlyWinners.winners.map((winner) => (
-                <Card key={winner.id} className="bg-gradient-to-r from-yellow-400 to-yellow-600 text-white">
+              {[1, 2, 3].map((i) => (
+                <Card key={i} className="bg-muted/50">
                   <CardHeader>
                     <div className="flex items-center justify-between">
-                      <div>
-                        <CardTitle className="text-xl">
-                          {winner.username}님
-                        </CardTitle>
-                        <CardDescription className="text-white/80">
-                          {winner.score}점
-                        </CardDescription>
+                      <div className="space-y-2">
+                        <Skeleton className="h-6 w-32" />
+                        <Skeleton className="h-4 w-24" />
                       </div>
-                      <Trophy className="h-8 w-8" />
+                      <Skeleton className="h-8 w-8 rounded-full" />
                     </div>
                   </CardHeader>
                 </Card>
@@ -128,42 +149,71 @@ export default function SnackBook() {
           </Button>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {snacks.map((snack, index) => (
-            <Card key={index} className="hover:shadow-lg transition-shadow flex flex-col">
-              <CardHeader className="flex-none">
-                <CardTitle className="text-lg">{snack.prdlstNm}</CardTitle>
-                <CardDescription>{snack.mnfcturCo}</CardDescription>
-              </CardHeader>
-              <CardContent className="flex-grow">
-                <div className="space-y-4">
-                  {snack.imgUrl1 && (
-                    <div className="relative aspect-video">
-                      <img 
-                        src={snack.imgUrl1} 
-                        alt={snack.prdlstNm}
-                        className="absolute inset-0 w-full h-full object-cover rounded-md"
-                      />
-                    </div>
-                  )}
-                  {snack.nutrient && (
+        {loading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {[1, 2].map((i) => (
+              <Card key={i} className="hover:shadow-lg transition-shadow flex flex-col">
+                <CardHeader className="flex-none">
+                  <Skeleton className="h-6 w-3/4 mb-2" />
+                  <Skeleton className="h-4 w-1/2" />
+                </CardHeader>
+                <CardContent className="flex-grow">
+                  <div className="space-y-4">
+                    <Skeleton className="aspect-video w-full rounded-md" />
                     <div className="bg-muted/50 rounded-lg p-4">
-                      <h3 className="font-semibold mb-3 text-sm">영양성분 (1회 제공량당 함량)</h3>
-                      <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-                        {Array.from(formatNutrient(snack.nutrient)).map(([key, value], index) => (
-                          <div key={index} className="flex justify-between items-center">
-                            <span className="text-muted-foreground truncate">{key}</span>
-                            <span className="font-medium ml-2">{value}</span>
+                      <Skeleton className="h-5 w-48 mb-3" />
+                      <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                        {[1, 2, 3, 4].map((j) => (
+                          <div key={j} className="flex justify-between items-center">
+                            <Skeleton className="h-4 w-20" />
+                            <Skeleton className="h-4 w-16" />
                           </div>
                         ))}
                       </div>
                     </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {snacks.map((snack, index) => (
+              <Card key={index} className="hover:shadow-lg transition-shadow flex flex-col">
+                <CardHeader className="flex-none">
+                  <CardTitle className="text-lg">{snack.prdlstNm}</CardTitle>
+                  <CardDescription>{snack.mnfcturCo}</CardDescription>
+                </CardHeader>
+                <CardContent className="flex-grow">
+                  <div className="space-y-4">
+                    {snack.imgUrl1 && (
+                      <div className="relative aspect-video">
+                        <img 
+                          src={snack.imgUrl1} 
+                          alt={snack.prdlstNm}
+                          className="absolute inset-0 w-full h-full object-cover rounded-md"
+                        />
+                      </div>
+                    )}
+                    {snack.nutrient && (
+                      <div className="bg-muted/50 rounded-lg p-4">
+                        <h3 className="font-semibold mb-3 text-sm">영양성분 (1회 제공량당 함량)</h3>
+                        <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                          {Array.from(formatNutrient(snack.nutrient)).map(([key, value], index) => (
+                            <div key={index} className="flex justify-between items-center">
+                              <span className="text-muted-foreground truncate">{key}</span>
+                              <span className="font-medium ml-2">{value}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
 
         {snacks.length === 0 && !loading && (
           <div className="text-center text-muted-foreground mt-8">
