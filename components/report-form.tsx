@@ -87,6 +87,14 @@ export function ReportForm() {
     fetchUsers()
   }, [])
 
+  useEffect(() => {
+    if (typeof window !== "undefined" && "Notification" in window) {
+      if (Notification.permission === "default") {
+        Notification.requestPermission();
+      }
+    }
+  }, []);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
     setFormData((prev) => ({ ...prev, [name]: value }))
@@ -136,6 +144,16 @@ export function ReportForm() {
         title: "신고가 접수되었습니다!",
         description: `${formData.name}님의 간식 섭취가 성공적으로 신고되었습니다.`,
       })
+
+      // 데스크탑 알림
+      if (typeof window !== "undefined" && "Notification" in window) {
+        if (Notification.permission === "granted") {
+          new Notification("신고 알림", {
+            body: `${formData.name}님이 새로운 신고를 했습니다!`,
+            icon: "/icon.png",
+          });
+        }
+      }
 
       // 신고 성공 시 이벤트 발생
       eventBus.emit("reportSubmitted")
