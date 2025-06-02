@@ -16,7 +16,11 @@ const rules = [
   },
   {
     icon: <Cookie className="text-yellow-500 w-6 h-6" />,
-    text: "5월 한정 당 4G이하 과자 가능",
+    text: "당 4G이하 과자 가능",
+  },
+  {
+    icon: <XCircle className="text-red-500 w-6 h-6" />,
+    text: "정제탄수화물 금지",
   },
 ];
 
