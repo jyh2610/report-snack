@@ -41,6 +41,10 @@ const items: NavItem[] = [
     title: "리더보드",
     href: "/leaderboard",
   },
+  {
+    title: "채팅",
+    href: "/chat",
+  },
 ]
 
 export function Nav() {
