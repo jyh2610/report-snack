@@ -180,7 +180,7 @@ export default function ChatPage() {
     const newMessage: Message = {
       id: uuidv4(),
       content: message.trim(),
-      sender: userId.current,
+      sender: userId.current ?? "",
       nickname: nickname,
       timestamp: Date.now()
     }
