@@ -9,6 +9,7 @@ import { v4 as uuidv4 } from 'uuid'
 import Pusher from 'pusher-js'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { motion, AnimatePresence } from "framer-motion"
+import { toast } from '@/hooks/use-toast'
 
 interface Message {
   id: string
@@ -46,15 +47,62 @@ export default function ChatPage() {
   useEffect(() => {
     if (!nickname) return
 
-    const pusher = new Pusher(process.env.NEXT_PUBLIC_PUSHER_KEY || '', {
-      cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER || '',
-      authEndpoint: '/api/pusher/auth',
+    // 환경 변수 확인
+    const pusherKey = process.env.NEXT_PUBLIC_PUSHER_KEY
+    const pusherCluster = process.env.NEXT_PUBLIC_PUSHER_CLUSTER
+
+    if (!pusherKey || !pusherCluster) {
+      console.error('Pusher 환경 변수가 설정되지 않았습니다.')
+      return
+    }
+
+    console.log('Pusher 설정:', { key: pusherKey, cluster: pusherCluster })
+
+    const pusher = new Pusher(pusherKey, {
+      cluster: pusherCluster,
+      authEndpoint: `${window.location.origin}/api/pusher/auth`,
       auth: {
         params: {
           user_id: userId.current,
           user_info: JSON.stringify({ nickname })
+        },
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded'
         }
-      }
+      },
+      enabledTransports: ['ws', 'wss'],
+      disabledTransports: ['xhr_streaming', 'xhr_polling'],
+      forceTLS: true
+    })
+
+    // 연결 상태 모니터링
+    pusher.connection.bind('connecting', () => {
+      console.log('Pusher 연결 중...')
+    })
+
+    pusher.connection.bind('connected', () => {
+      console.log('Pusher 연결됨')
+      setIsConnected(true)
+    })
+
+    pusher.connection.bind('disconnected', () => {
+      console.log('Pusher 연결 끊김')
+      setIsConnected(false)
+    })
+
+    pusher.connection.bind('error', (err: any) => {
+      console.error('Pusher 연결 상세 오류:', err)
+      setIsConnected(false)
+      
+      // 연결 재시도
+      setTimeout(() => {
+        console.log('Pusher 연결 재시도...')
+        pusher.connect()
+      }, 3000)
+    })
+
+    pusher.connection.bind('state_change', (states: any) => {
+      console.log('Pusher 상태 변경:', states)
     })
 
     const channel = pusher.subscribe('presence-chat')
@@ -66,32 +114,48 @@ export default function ChatPage() {
     })
 
     channel.bind('pusher:subscription_succeeded', (members: any) => {
-      setIsConnected(true)
+      console.log('채널 구독 성공:', members)
       const users: User[] = []
       members.each((member: any) => {
-        const userInfo = JSON.parse(member.info.user_info)
-        users.push({
-          id: member.id,
-          nickname: userInfo.nickname
-        })
+        try {
+          const userInfo = member.info?.user_info ? JSON.parse(member.info.user_info) : { nickname: '알 수 없음' }
+          users.push({
+            id: member.id,
+            nickname: userInfo.nickname || '알 수 없음'
+          })
+        } catch (error) {
+          console.error('사용자 정보 파싱 오류:', error)
+          users.push({
+            id: member.id,
+            nickname: '알 수 없음'
+          })
+        }
       })
       setOnlineUsers(users)
     })
 
     channel.bind('pusher:member_added', (member: any) => {
-      const userInfo = JSON.parse(member.info.user_info)
-      setOnlineUsers(prev => [...prev, {
-        id: member.id,
-        nickname: userInfo.nickname
-      }])
+      try {
+        const userInfo = member.info?.user_info ? JSON.parse(member.info.user_info) : { nickname: '알 수 없음' }
+        setOnlineUsers(prev => [...prev, {
+          id: member.id,
+          nickname: userInfo.nickname || '알 수 없음'
+        }])
+      } catch (error) {
+        console.error('새 사용자 정보 파싱 오류:', error)
+        setOnlineUsers(prev => [...prev, {
+          id: member.id,
+          nickname: '알 수 없음'
+        }])
+      }
     })
 
     channel.bind('pusher:member_removed', (member: any) => {
       setOnlineUsers(prev => prev.filter(user => user.id !== member.id))
     })
 
-    channel.bind('pusher:subscription_error', () => {
-      setIsConnected(false)
+    channel.bind('pusher:subscription_error', (error: any) => {
+      console.error('채널 구독 오류:', error)
     })
 
     pusherRef.current = pusher
@@ -120,13 +184,15 @@ export default function ChatPage() {
     setIsSending(true)
     const newMessage: Message = {
       id: uuidv4(),
-      content: message,
+      content: message.trim(),
       sender: userId.current,
       nickname: nickname,
       timestamp: Date.now()
     }
 
     try {
+      console.log('전송할 메시지:', newMessage)
+      
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: {
@@ -135,11 +201,20 @@ export default function ChatPage() {
         body: JSON.stringify(newMessage),
       })
 
-      if (!response.ok) throw new Error('메시지 전송 실패')
+      if (!response.ok) {
+        const errorData = await response.json()
+        console.error('서버 응답 오류:', errorData)
+        throw new Error(errorData.details || '메시지 전송 실패')
+      }
       
       setMessage("")
-    } catch (error) {
+    } catch (error: any) {
       console.error('메시지 전송 중 오류:', error)
+                toast({
+        title: "메시지 전송 실패",
+        description: error.message || "메시지를 전송하는 중 오류가 발생했습니다.",
+        variant: "destructive",
+      })
     } finally {
       setIsSending(false)
     }
