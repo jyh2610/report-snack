@@ -116,38 +116,24 @@ export default function ChatPage() {
     channel.bind('pusher:subscription_succeeded', (members: any) => {
       console.log('채널 구독 성공:', members)
       const users: User[] = []
+      
       members.each((member: any) => {
-        try {
-          const userInfo = member.info?.user_info ? JSON.parse(member.info.user_info) : { nickname: '알 수 없음' }
-          users.push({
-            id: member.id,
-            nickname: userInfo.nickname || '알 수 없음'
-          })
-        } catch (error) {
-          console.error('사용자 정보 파싱 오류:', error)
-          users.push({
-            id: member.id,
-            nickname: '알 수 없음'
-          })
-        }
+        users.push({
+          id: member.id,
+          nickname: member.info.nickname || '알 수 없음'
+        })
       })
       setOnlineUsers(users)
     })
 
     channel.bind('pusher:member_added', (member: any) => {
-      try {
-        const userInfo = member.info?.user_info ? JSON.parse(member.info.user_info) : { nickname: '알 수 없음' }
-        setOnlineUsers(prev => [...prev, {
+      setOnlineUsers(prev => [
+        ...prev,
+        {
           id: member.id,
-          nickname: userInfo.nickname || '알 수 없음'
-        }])
-      } catch (error) {
-        console.error('새 사용자 정보 파싱 오류:', error)
-        setOnlineUsers(prev => [...prev, {
-          id: member.id,
-          nickname: '알 수 없음'
-        }])
-      }
+          nickname: member.info.nickname || '알 수 없음'
+        }
+      ])
     })
 
     channel.bind('pusher:member_removed', (member: any) => {
