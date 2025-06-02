@@ -41,10 +41,6 @@ const items: NavItem[] = [
     title: "리더보드",
     href: "/leaderboard",
   },
-  {
-    title: "간식 도감",
-    href: "/snackbook",
-  },
 ]
 
 export function Nav() {

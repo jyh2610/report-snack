@@ -7,10 +7,10 @@ import { Button } from "@/components/ui/button"
 import { Search, Trophy } from "lucide-react"
 
 interface Snack {
-  name: string
-  brand: string
-  calories: number
-  image?: string
+  prdlstNm: string
+  mnfcturCo: string
+  nutrient: string  // 영양성분 정보
+  imgUrl1?: string
 }
 
 interface MonthlyWinner {
@@ -49,14 +49,37 @@ export default function SnackBook() {
     
     setLoading(true)
     try {
-      const response = await fetch(`/api/getKcal?query=${encodeURIComponent(searchQuery)}`)
+      const response = await fetch(`/api/getKcal?foodNm=${encodeURIComponent(searchQuery)}`)
+      if (!response.ok) throw new Error('음식 정보를 불러오지 못했습니다.')
       const data = await response.json()
-      setSnacks(data)
+      const items = data.body?.items?.item || []
+      setSnacks(Array.isArray(items) ? items : [items])
     } catch (error) {
       console.error('간식 검색 중 오류 발생:', error)
     } finally {
       setLoading(false)
     }
+  }
+
+  const formatNutrient = (nutrient: string | undefined) => {
+    if (!nutrient) return new Map<string, string>()
+    
+    // 영양성분 문자열을 파싱하여 객체로 변환
+    const nutrientMap = new Map<string, string>()
+    
+    try {
+      // 콤마로 구분된 각 영양소 정보를 처리
+      nutrient.split(',').forEach(item => {
+        const [key, value] = item.trim().split(/(?<=[가-힣])\s+/)
+        if (key && value) {
+          nutrientMap.set(key, value)
+        }
+      })
+    } catch (error) {
+      console.error('영양성분 파싱 중 오류:', error)
+    }
+
+    return nutrientMap
   }
 
   return (
@@ -105,24 +128,36 @@ export default function SnackBook() {
           </Button>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {snacks.map((snack, index) => (
-            <Card key={index} className="hover:shadow-lg transition-shadow">
-              <CardHeader>
-                <CardTitle>{snack.name}</CardTitle>
-                <CardDescription>{snack.brand}</CardDescription>
+            <Card key={index} className="hover:shadow-lg transition-shadow flex flex-col">
+              <CardHeader className="flex-none">
+                <CardTitle className="text-lg">{snack.prdlstNm}</CardTitle>
+                <CardDescription>{snack.mnfcturCo}</CardDescription>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  <p className="text-sm text-muted-foreground">
-                    칼로리: {snack.calories}kcal
-                  </p>
-                  {snack.image && (
-                    <img 
-                      src={snack.image} 
-                      alt={snack.name}
-                      className="w-full h-48 object-cover rounded-md"
-                    />
+              <CardContent className="flex-grow">
+                <div className="space-y-4">
+                  {snack.imgUrl1 && (
+                    <div className="relative aspect-video">
+                      <img 
+                        src={snack.imgUrl1} 
+                        alt={snack.prdlstNm}
+                        className="absolute inset-0 w-full h-full object-cover rounded-md"
+                      />
+                    </div>
+                  )}
+                  {snack.nutrient && (
+                    <div className="bg-muted/50 rounded-lg p-4">
+                      <h3 className="font-semibold mb-3 text-sm">영양성분 (1회 제공량당 함량)</h3>
+                      <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                        {Array.from(formatNutrient(snack.nutrient)).map(([key, value], index) => (
+                          <div key={index} className="flex justify-between items-center">
+                            <span className="text-muted-foreground truncate">{key}</span>
+                            <span className="font-medium ml-2">{value}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
                   )}
                 </div>
               </CardContent>
