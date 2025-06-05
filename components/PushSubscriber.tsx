@@ -87,9 +87,9 @@ export default function PushSubscriber() {
   }, [])
 
   return (
-    <div className="mb-6">
+    <div className="mb-6 flex items-center justify-center">
       {subscribed ? (
-        <p className="text-sm text-green-600">✅ 이미 푸시 구독됨</p>
+        <p className="text-sm text-green-600">✅푸시 구독됨</p>
       ) : (
         <button
           onClick={subscribePush}

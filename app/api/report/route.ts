@@ -83,6 +83,8 @@ export async function POST(request: Request) {
       body: `${name}님이 "${snack_kind}"을(를) 신고했습니다.`,
       icon: "/icon-192x192.png",
       url: "/admin/reports",
+      tag: "new-report",
+      renotify: false,
     })
 
     const sendPromises = subscriptions!.map((row) => {
@@ -94,7 +96,11 @@ export async function POST(request: Request) {
         },
       }
 
-      return webpush.sendNotification(pushSubscription, payload).catch((err: any) => {
+      return webpush.sendNotification(pushSubscription, payload, {
+        TTL: 60,
+        urgency: "high",
+        topic: "new-report",
+      }).catch((err: any) => {
         console.error("푸시 전송 실패:", err)
         if (err.statusCode === 410 || err.statusCode === 404) {
           return supabase
