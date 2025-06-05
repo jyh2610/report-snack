@@ -1,5 +1,5 @@
 // pages/api/report.ts
-import type { NextApiRequest, NextApiResponse } from "next"
+import { NextResponse } from 'next/server'
 import webpush from "web-push"
 import { supabase } from "@/lib/supabase"
 
@@ -30,13 +30,9 @@ const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!
 const privateKey = process.env.VAPID_PRIVATE_KEY!
 webpush.setVapidDetails("mailto:admin@your-domain.com", publicKey, privateKey)
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (req.method !== "POST") {
-    res.setHeader("Allow", ["POST"])
-    return res.status(405).end(`Method ${req.method} Not Allowed`)
-  }
-
+export async function POST(request: Request) {
   try {
+    const body = await request.json()
     const {
       name,
       snack_kind,
@@ -49,7 +45,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       protein,
       fat,
       carbohydrate,
-    } = req.body as ReportPayload
+    } = body as ReportPayload
 
     const { data: insertedReport, error: insertError } = await supabase
       .from("report")
@@ -111,9 +107,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     })
 
     await Promise.all(sendPromises)
-    return res.status(200).json({ message: "신고 접수 및 푸시 알림 전송 완료" })
+    return NextResponse.json({ message: "신고 접수 및 푸시 알림 전송 완료" })
   } catch (error) {
     console.error("API/report 에러:", error)
-    return res.status(500).json({ error: "서버 오류. 다시 시도해주세요." })
+    return NextResponse.json(
+      { error: "서버 오류. 다시 시도해주세요." },
+      { status: 500 }
+    )
   }
 }
