@@ -18,6 +18,7 @@ import { useToast } from "@/hooks/use-toast"
 import { useRouter } from "next/navigation"
 import { useState, useEffect } from "react"
 import { useUser } from "@/contexts/UserContext"
+import PushSubscriber from "./PushSubscriber"
 
 interface NavItem {
   title: string
@@ -90,6 +91,7 @@ export function Nav() {
             </Link>
           ))}
         </div>
+        <PushSubscriber />
         <div className="ml-auto flex items-center space-x-4">
           {currentUser ? (
             <DropdownMenu>
