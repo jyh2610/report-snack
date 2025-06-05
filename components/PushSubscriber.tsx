@@ -29,8 +29,16 @@ export default function PushSubscriber() {
     }
 
     try {
+      toast({ 
+        title: "푸시 알림 설정 중...",
+        description: "잠시만 기다려주세요.",
+      })
+
       const registration = await navigator.serviceWorker.register("/sw.js")
       console.log("Service Worker 등록 성공:", registration)
+
+      // 서비스 워커가 활성화될 때까지 잠시 대기
+      await new Promise(resolve => setTimeout(resolve, 1000))
 
       const permission = await Notification.requestPermission()
       if (permission !== "granted") {
@@ -62,7 +70,7 @@ export default function PushSubscriber() {
       console.error("구독 생성 중 오류:", err)
       toast({
         title: "푸시 구독 실패",
-        description: "다시 시도해주세요.",
+        description: "잠시 후 다시 시도해주세요.",
         variant: "destructive",
       })
     }
