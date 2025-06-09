@@ -15,10 +15,6 @@ const rules = [
     text: "커피 : 아메리카노&라떼만 O, 그 외 시럽들어간 음료 X",
   },
   {
-    icon: <Cookie className="text-yellow-500 w-6 h-6" />,
-    text: "당 4G이하 과자 가능",
-  },
-  {
     icon: <XCircle className="text-red-500 w-6 h-6" />,
     text: "정제탄수화물 금지",
   },

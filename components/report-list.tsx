@@ -295,7 +295,7 @@ export function ReportList() {
                 <div className="flex-1">
                   <div className="flex justify-between items-start mb-1">
                     <div>
-                      <h3 className="font-medium">{report.name}</h3>
+                    <h3 className="font-medium">{report.name}</h3>
                       <div className="flex items-center gap-1 text-xs text-gray-500 mt-1">
                         <UserIcon className="h-3 w-3" />
                         <span>제보자: {report.informant}</span>

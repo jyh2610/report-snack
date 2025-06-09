@@ -3,8 +3,8 @@
 import { useState, useEffect, useRef } from 'react'
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { Card } from "@/components/ui/card"
-import { Send, User, Users, Loader2 } from "lucide-react"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Send, User, Users, Loader2, CheckCircle, XCircle, Coffee, Cookie, Calendar } from "lucide-react"
 import { v4 as uuidv4 } from 'uuid'
 import Pusher from 'pusher-js'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
@@ -23,6 +23,29 @@ interface User {
   id: string
   nickname: string
 }
+
+const rules = [
+  {
+    icon: <XCircle className="text-red-500 w-6 h-6" />,
+    text: "과일, 과자, 사탕, 초콜렛 등등 X",
+  },
+  {
+    icon: <CheckCircle className="text-green-500 w-6 h-6" />,
+    text: "견과류, 채소, 계란 가능",
+  },
+  {
+    icon: <Coffee className="text-brown-500 w-6 h-6" />,
+    text: "커피 : 아메리카노&라떼만 O, 그 외 시럽들어간 음료 X",
+  },
+  {
+    icon: <XCircle className="text-red-500 w-6 h-6" />,
+    text: "정제탄수화물 금지",
+  },
+  {
+    icon: <Calendar className="text-blue-500 w-6 h-6" />,
+    text: "치팅데이: 간식오는날 한번, 다같이 합의한 날 한번 허용",
+  },
+];
 
 export default function ChatPage() {
   const [messages, setMessages] = useState<Message[]>([])
