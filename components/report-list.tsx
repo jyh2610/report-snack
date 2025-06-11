@@ -171,7 +171,16 @@ export function ReportList() {
 
       const agreedCount = Object.keys(newAgreements).length;
       if (agreedCount === users.length) {
-        // 모든 사용자가 동의했으면 해당 리포트를 삭제
+        // 모든 사용자가 동의했을 때
+        // 1. 신고당한 유저의 점수 감소
+        const { error: updateScoreError } = await supabase
+          .from("user")
+          .update({ score: supabase.rpc('decrement_score') })
+          .eq('id', report.id);
+
+        if (updateScoreError) throw updateScoreError;
+
+        // 2. 신고 삭제
         const { error: deleteError } = await supabase
           .from("report")
           .delete()
@@ -181,7 +190,7 @@ export function ReportList() {
 
         toast({
           title: "신고가 삭제되었습니다",
-          description: "모든 사용자의 동의로 신고가 삭제되었습니다.",
+          description: "모든 사용자의 동의로 신고가 삭제되었고, 신고당한 유저의 점수가 감소했습니다.",
         });
       } else {
         // 동의 수만 업데이트
