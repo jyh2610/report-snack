@@ -130,6 +130,7 @@ export default function SnackBook() {
     <div className="container mx-auto py-8">
       <div className="max-w-4xl mx-auto">
         <h1 className="text-3xl font-bold mb-8 text-center">간식 도감</h1>
+        <NewChat />
 
         {monthlyWinners ? (
           monthlyWinners.winners.length > 0 && (
@@ -179,7 +180,6 @@ export default function SnackBook() {
           </div>
         )}
         
-        <NewChat />
       </div>
     </div>
   )
