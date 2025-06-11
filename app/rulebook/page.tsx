@@ -1,5 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { CheckCircle, XCircle, Coffee, Cookie } from "lucide-react";
+import { CheckCircle, XCircle, Coffee, Cookie, Calendar } from "lucide-react";
 
 const rules = [
   {
@@ -17,6 +17,10 @@ const rules = [
   {
     icon: <XCircle className="text-red-500 w-6 h-6" />,
     text: "정제탄수화물 금지",
+  },
+  {
+    icon: <Calendar className="text-blue-500 w-6 h-6" />,
+    text: "치팅데이 : 간식오는날 한번, 다같이 합의한 날 한번 허용",
   },
 ];
 

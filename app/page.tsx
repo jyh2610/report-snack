@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Search, Trophy } from "lucide-react"
 import { Skeleton } from "@/components/ui/skeleton"
 import { supabase } from "@/lib/supabase"
+import NewChat from "@/components/NewChat"
 
 interface Snack {
   prdlstNm: string
@@ -178,97 +179,7 @@ export default function SnackBook() {
           </div>
         )}
         
-        <div className="flex gap-2 mb-8">
-          <Input
-            placeholder="찾고 싶은 간식을 검색해보세요"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-            className="flex-1"
-          />
-          <Button onClick={handleSearch} disabled={loading}>
-            <Search className="h-4 w-4 mr-2" />
-            검색
-          </Button>
-        </div>
-
-        {loading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {[1, 2].map((i) => (
-              <Card key={i} className="hover:shadow-lg transition-shadow flex flex-col">
-                <CardHeader className="flex-none">
-                  <Skeleton className="h-6 w-3/4 mb-2" />
-                  <Skeleton className="h-4 w-1/2" />
-                </CardHeader>
-                <CardContent className="flex-grow">
-                  <div className="space-y-4">
-                    <Skeleton className="aspect-video w-full rounded-md" />
-                    <div className="bg-muted/50 rounded-lg p-4">
-                      <Skeleton className="h-5 w-48 mb-3" />
-                      <div className="grid grid-cols-2 gap-x-4 gap-y-2">
-                        {[1, 2, 3, 4].map((j) => (
-                          <div key={j} className="flex justify-between items-center">
-                            <Skeleton className="h-4 w-20" />
-                            <Skeleton className="h-4 w-16" />
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {snacks.map((snack, index) => (
-              <Card key={index} className="hover:shadow-lg transition-shadow flex flex-col">
-                <CardHeader className="flex-none">
-                  <CardTitle className="text-lg">{snack.prdlstNm}</CardTitle>
-                  <CardDescription>{snack.mnfcturCo}</CardDescription>
-                </CardHeader>
-                <CardContent className="flex-grow">
-                  <div className="space-y-4">
-                    {snack.imgUrl1 && (
-                      <div className="relative aspect-video">
-                        <img 
-                          src={snack.imgUrl1} 
-                          alt={snack.prdlstNm}
-                          className="absolute inset-0 w-full h-full object-cover rounded-md"
-                        />
-                      </div>
-                    )}
-                    {snack.nutrient && (
-                      <div className="bg-muted/50 rounded-lg p-4">
-                        <h3 className="font-semibold mb-3 text-sm">영양성분 (1회 제공량당 함량)</h3>
-                        <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-                          {Array.from(formatNutrient(snack.nutrient)).map(([key, value], index) => (
-                            <div key={index} className="flex justify-between items-center">
-                              <span className="text-muted-foreground truncate">{key}</span>
-                              <span className="font-medium ml-2">{value}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        )}
-
-        {snacks.length === 0 && !loading && (
-          <div className="text-center text-muted-foreground mt-8">
-            검색어를 입력하여 간식 정보를 찾아보세요
-          </div>
-        )}
-
-        {loading && (
-          <div className="text-center mt-8">
-            검색 중...
-          </div>
-        )}
+        <NewChat />
       </div>
     </div>
   )
